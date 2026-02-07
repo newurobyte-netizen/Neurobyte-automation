@@ -1,0 +1,30 @@
+name: NeuroByte Automation
+
+on:
+  schedule:
+    # Runs every day at 9 AM IST (03:30 UTC)
+    - cron: '30 3 * * *'
+  workflow_dispatch: # allows manual trigger
+
+jobs:
+  neurobyte:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run NeuroByte pipeline
+      run: node scripts/neurobyte.js
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        WHATSAPP_SESSION: ${{ secrets.WHATSAPP_SESSION }}
