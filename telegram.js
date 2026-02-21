@@ -29,7 +29,7 @@ async function getYouTubeStats() {
 // --- HuggingFace AI Chat Response ---
 async function chatWithAI(prompt) {
   try {
-    const response = await fetch("https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct", {
+    const response = await fetch("https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${hfKey}`,
@@ -37,10 +37,10 @@ async function chatWithAI(prompt) {
       },
       body: JSON.stringify({ inputs: prompt })
     });
-    const data = await response.json();
-    console.log("HF Response:", data); // Debug log
 
-    // Handle different response formats
+    const data = await response.json();
+    console.log("HF Raw Response:", JSON.stringify(data, null, 2)); // Debug log
+
     if (Array.isArray(data) && data[0]?.generated_text) {
       return data[0].generated_text;
     }
@@ -53,8 +53,8 @@ async function chatWithAI(prompt) {
 
     return "🤖 Couldn’t generate a reply just now, but I’m still here!";
   } catch (err) {
-    console.error("❌ AI error:", err);
-    return "😅 Bro, something went wrong… but I’m still here to chat!";
+    console.error("❌ HuggingFace API error:", err);
+    return "😅 Bro, HuggingFace didn’t reply… check logs!";
   }
 }
 
