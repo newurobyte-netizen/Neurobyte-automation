@@ -4,7 +4,6 @@ const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fet
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const ghPat = process.env.GH_PAT;
-const AI_PROVIDER = process.env.AI_PROVIDER || "huggingface";
 const hfKey = process.env.HF_API_KEY;
 
 const bot = new TelegramBot(token, { polling: true });
@@ -39,7 +38,7 @@ async function chatWithAI(prompt) {
     });
 
     const data = await response.json();
-    console.log("HF Raw Response:", JSON.stringify(data, null, 2)); // Debug log
+    console.log("HF Raw Response:", JSON.stringify(data, null, 2));
 
     if (Array.isArray(data) && data[0]?.generated_text) {
       return data[0].generated_text;
