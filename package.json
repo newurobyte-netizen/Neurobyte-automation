@@ -1,0 +1,13 @@
+{
+  "name": "neurobyte-automation",
+  "version": "1.0.0",
+  "main": "telegram.js",
+  "scripts": {
+    "start": "node telegram.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.4",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.61.0"
+  }
+}
