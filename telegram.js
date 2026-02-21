@@ -28,13 +28,16 @@ async function getYouTubeStats() {
 // --- HuggingFace AI Chat Response ---
 async function chatWithAI(prompt) {
   try {
-    const response = await fetch("https://router.huggingface.co/facebook/blenderbot-400M-distill", {
+    const response = await fetch("https://router.huggingface.co/inference", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${hfKey}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ inputs: prompt })
+      body: JSON.stringify({
+        model: "facebook/blenderbot-400M-distill",
+        inputs: prompt
+      })
     });
 
     const data = await response.json();
