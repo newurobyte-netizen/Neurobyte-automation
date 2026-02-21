@@ -25,19 +25,16 @@ async function getYouTubeStats() {
   return { subs: 850, views: 12340, topVideo: "AI Tools 2026", watchHours: 3200 };
 }
 
-// --- HuggingFace AI Chat Response ---
+// --- HuggingFace AI Chat Response (direct model endpoint) ---
 async function chatWithAI(prompt) {
   try {
-    const response = await fetch("https://router.huggingface.co/inference", {
+    const response = await fetch("https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${hfKey}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: "facebook/blenderbot-400M-distill",
-        inputs: prompt
-      })
+      body: JSON.stringify({ inputs: prompt })
     });
 
     const data = await response.json();
