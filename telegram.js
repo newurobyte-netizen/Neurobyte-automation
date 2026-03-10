@@ -31,7 +31,7 @@ async function getYouTubeStats() {
 async function chatWithAI(prompt) {
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
+      model: "gpt-4-turbo",   // advanced model
       messages: [{ role: "user", content: prompt }],
       max_tokens: 300
     });
