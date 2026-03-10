@@ -1,10 +1,12 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const { OpenAI } = require("openai");
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const ghPat = process.env.GH_PAT;
-const hfKey = process.env.HF_API_KEY;
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 const bot = new TelegramBot(token, { polling: true });
 
@@ -25,35 +27,21 @@ async function getYouTubeStats() {
   return { subs: 850, views: 12340, topVideo: "AI Tools 2026", watchHours: 3200 };
 }
 
-// --- HuggingFace AI Chat Response (direct model endpoint) ---
+// --- OpenAI GPT-4 Turbo Chat Response ---
 async function chatWithAI(prompt) {
   try {
-    const response = await fetch("https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${hfKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ inputs: prompt })
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 300
     });
 
-    const data = await response.json();
-    console.log("HF Raw Response:", JSON.stringify(data, null, 2));
-
-    if (Array.isArray(data) && data[0]?.generated_text) {
-      return data[0].generated_text;
-    }
-    if (data?.generated_text) {
-      return data.generated_text;
-    }
-    if (typeof data === "string") {
-      return data;
-    }
-
-    return "🤖 Couldn’t generate a reply just now, but I’m still here!";
+    const reply = completion.choices[0].message.content;
+    console.log("OpenAI Raw Response:", reply);
+    return reply;
   } catch (err) {
-    console.error("❌ HuggingFace API error:", err);
-    return "😅 Bro, HuggingFace didn’t reply… check logs!";
+    console.error("❌ OpenAI API error:", err);
+    return "😅 Bro, OpenAI didn’t reply… check logs!";
   }
 }
 
