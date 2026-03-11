@@ -6,6 +6,8 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const ghPat = process.env.GH_PAT;
 const openrouterKey = process.env.OPENROUTER_API_KEY;
+const youtubeKey = process.env.YOUTUBE_API_KEY;
+const channelId = "UCwGwugHAvskgkW1ij1vP7IA"; // <-- Replace with your real Channel ID
 
 // --- Initialize bot in webhook mode ---
 const bot = new TelegramBot(token, { polling: false });
@@ -31,12 +33,26 @@ async function triggerWorkflow() {
   });
 }
 
-// --- YouTube Stats Placeholder ---
+// --- YouTube Stats (Live via API) ---
 async function getYouTubeStats() {
-  return { subs: 850, views: 12340, topVideo: "AI Tools 2026", watchHours: 3200 };
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}&key=${youtubeKey}`
+    );
+    const data = await response.json();
+    const stats = data.items[0].statistics;
+    return {
+      subs: stats.subscriberCount,
+      views: stats.viewCount,
+      videos: stats.videoCount
+    };
+  } catch (err) {
+    console.error("❌ YouTube API error:", err);
+    return { subs: "N/A", views: "N/A", videos: "N/A" };
+  }
 }
 
-// --- OpenRouter Chat Response (Creative Model) ---
+// --- OpenRouter Chat Response ---
 async function chatWithAI(prompt) {
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -82,12 +98,12 @@ bot.on('message', async (msg) => {
   }
   if (text.toLowerCase().includes('report')) {
     const stats = await getYouTubeStats();
-    bot.sendMessage(chatId, `📊 Report:\nViews: ${stats.views}\nSubs: ${stats.subs}\nTop Video: ${stats.topVideo}\nWatch Hours: ${stats.watchHours}`);
+    bot.sendMessage(chatId, `📊 Report:\nViews: ${stats.views}\nSubs: ${stats.subs}\nVideos: ${stats.videos}`);
     return;
   }
   if (text.toLowerCase().includes('adsense')) {
     const stats = await getYouTubeStats();
-    if (stats.subs >= 1000 && stats.watchHours >= 4000) {
+    if (parseInt(stats.subs) >= 1000 && parseInt(stats.watchHours) >= 4000) {
       bot.sendMessage(chatId, "✅ Channel is ready for AdSense!");
     } else {
       bot.sendMessage(chatId, `⚠️ Not ready yet bro. Subs: ${stats.subs}, Watch Hours: ${stats.watchHours}. Need 1000 subs + 4000 hours.`);
