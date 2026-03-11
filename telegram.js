@@ -1,7 +1,7 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
-const fetch = require('node-fetch');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const ghPat = process.env.GH_PAT;
@@ -37,7 +37,7 @@ async function getYouTubeStats() {
   return { subs: 850, views: 12340, topVideo: "AI Tools 2026", watchHours: 3200 };
 }
 
-// --- OpenRouter Chat Response ---
+// --- OpenRouter Chat Response (Creative Model) ---
 async function chatWithAI(prompt) {
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -47,7 +47,7 @@ async function chatWithAI(prompt) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openai/gpt-3.5-turbo", // you can swap to mistral, llama, etc.
+        model: "arcee/trinity-large-preview", // Creative storytelling model
         messages: [{ role: "user", content: prompt }]
       })
     });
