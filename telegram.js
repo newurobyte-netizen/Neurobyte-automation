@@ -11,7 +11,6 @@ const openrouterKey = process.env.OPENROUTER_API_KEY;
 const bot = new TelegramBot(token, { polling: false });
 bot.setWebHook(`${process.env.RENDER_EXTERNAL_URL}/bot${token}`);
 
-// --- Express server to handle webhook ---
 const app = express();
 app.use(express.json());
 
@@ -47,7 +46,7 @@ async function chatWithAI(prompt) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "arcee/trinity-large-preview", // Creative storytelling model
+        model: "mistralai/mistral-7b-instruct", // Creative + free model
         messages: [{ role: "user", content: prompt }]
       })
     });
@@ -104,7 +103,6 @@ bot.on('message', async (msg) => {
   bot.sendMessage(chatId, aiReply);
 });
 
-// --- Start Express server ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Webhook server running on port ${PORT}`);
