@@ -46,7 +46,7 @@ async function chatWithAI(prompt) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "mistralai/mistral-7b-instruct", // Creative + free model
+        model: "openai/gpt-3.5-turbo", // Creative + stable free model
         messages: [{ role: "user", content: prompt }]
       })
     });
