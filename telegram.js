@@ -1,18 +1,14 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const { OpenAI } = require("openai");
 const express = require('express');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const ghPat = process.env.GH_PAT;
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // --- Initialize bot in webhook mode ---
 const bot = new TelegramBot(token, { polling: false });
-
-// --- Set webhook to Render external URL ---
 bot.setWebHook(`${process.env.RENDER_EXTERNAL_URL}/bot${token}`);
 
 // --- Express server to handle webhook ---
@@ -41,21 +37,20 @@ async function getYouTubeStats() {
   return { subs: 850, views: 12340, topVideo: "AI Tools 2026", watchHours: 3200 };
 }
 
-// --- OpenAI GPT-3.5 Turbo Chat Response ---
+// --- Gemini Chat Response ---
 async function chatWithAI(prompt) {
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",   // ✅ works for all accounts
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 300
-    });
-
-    const reply = completion.choices[0].message.content;
-    console.log("OpenAI Raw Response:", reply);
+    const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const result = await model.generateContent(prompt);
+    const reply = result.response.text();
+    console.log("Gemini Raw Response:", reply);
     return reply;
   } catch (err) {
-    console.error("❌ OpenAI API error:", err);
-    return "😅 Bro, OpenAI didn’t reply… check logs!";
+    console.error("❌ Gemini API error:", err);
+    if (err.message.includes("quota")) {
+      return "⚠️ Bro, Gemini free quota exceeded. Try again tomorrow!";
+    }
+    return "😅 Bro, Gemini didn’t reply… check logs!";
   }
 }
 
