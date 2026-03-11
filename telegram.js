@@ -1,6 +1,7 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const { OpenAI } = require("openai");
+const express = require('express');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const ghPat = process.env.GH_PAT;
@@ -8,7 +9,20 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const bot = new TelegramBot(token, { polling: true });
+// --- Initialize bot in webhook mode ---
+const bot = new TelegramBot(token, { polling: false });
+
+// --- Set webhook to Render external URL ---
+bot.setWebHook(`${process.env.RENDER_EXTERNAL_URL}/bot${token}`);
+
+// --- Express server to handle webhook ---
+const app = express();
+app.use(express.json());
+
+app.post(`/bot${token}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
 
 // --- GitHub Workflow Trigger ---
 async function triggerWorkflow() {
@@ -83,4 +97,10 @@ bot.on('message', async (msg) => {
 
   const aiReply = await chatWithAI(text);
   bot.sendMessage(chatId, aiReply);
+});
+
+// --- Start Express server ---
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`✅ Webhook server running on port ${PORT}`);
 });
