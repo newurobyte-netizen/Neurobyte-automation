@@ -1,11 +1,11 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const fetch = require('node-fetch');
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const ghPat = process.env.GH_PAT;
-const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const openrouterKey = process.env.OPENROUTER_API_KEY;
 
 // --- Initialize bot in webhook mode ---
 const bot = new TelegramBot(token, { polling: false });
@@ -37,20 +37,30 @@ async function getYouTubeStats() {
   return { subs: 850, views: 12340, topVideo: "AI Tools 2026", watchHours: 3200 };
 }
 
-// --- Gemini Chat Response ---
+// --- OpenRouter Chat Response ---
 async function chatWithAI(prompt) {
   try {
-    const model = gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
-    const result = await model.generateContent(prompt);
-    const reply = result.response.text();
-    console.log("Gemini Raw Response:", reply);
-    return reply;
-  } catch (err) {
-    console.error("❌ Gemini API error:", err);
-    if (err.message.includes("quota")) {
-      return "⚠️ Bro, Gemini free quota exceeded. Try again tomorrow!";
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openrouterKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-3.5-turbo", // you can swap to mistral, llama, etc.
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) {
+      console.error("❌ OpenRouter API error:", data.error);
+      return "⚠️ Bro, OpenRouter quota exceeded or error occurred.";
     }
-    return "😅 Bro, Gemini didn’t reply… check logs!";
+    return data.choices[0].message.content;
+  } catch (err) {
+    console.error("❌ API call failed:", err);
+    return "😅 Bro, OpenRouter didn’t reply… check logs!";
   }
 }
 
