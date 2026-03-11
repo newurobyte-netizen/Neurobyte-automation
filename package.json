@@ -1,7 +1,7 @@
 {
   "name": "neurobyte-automation",
   "version": "1.0.0",
-  "description": "Telegram bot for NeuroByte automation with Gemini integration",
+  "description": "Telegram bot for NeuroByte automation with OpenRouter integration",
   "main": "telegram.js",
   "scripts": {
     "start": "node telegram.js"
@@ -10,6 +10,6 @@
     "dotenv": "^17.3.1",
     "node-telegram-bot-api": "^0.61.0",
     "express": "^4.18.2",
-    "@google/generative-ai": "^0.14.0"
+    "node-fetch": "^2.6.7"
   }
 }
