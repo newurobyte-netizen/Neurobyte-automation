@@ -9,7 +9,6 @@ const openrouterKey = process.env.OPENROUTER_API_KEY;
 const youtubeKey = process.env.YOUTUBE_API_KEY;
 const channelId = "UCwGwugHAvskgkW1ij1vP7IA"; // <-- Replace with your real Channel ID
 
-// --- Initialize bot in webhook mode ---
 const bot = new TelegramBot(token, { polling: false });
 bot.setWebHook(`${process.env.RENDER_EXTERNAL_URL}/bot${token}`);
 
@@ -33,7 +32,7 @@ async function triggerWorkflow() {
   });
 }
 
-// --- YouTube Stats (Live via API) ---
+// --- YouTube Stats (Subscribers, Views, Videos) ---
 async function getYouTubeStats() {
   try {
     const response = await fetch(
@@ -52,7 +51,31 @@ async function getYouTubeStats() {
   }
 }
 
-// --- OpenRouter Chat Response ---
+// --- YouTube Watch Hours (last 60 months dynamically) ---
+async function getWatchHours() {
+  try {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 60); // go back 60 months
+
+    const formatDate = (d) => d.toISOString().split('T')[0];
+    const start = formatDate(startDate);
+    const end = formatDate(endDate);
+
+    const response = await fetch(
+      `https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&metrics=estimatedMinutesWatched&startDate=${start}&endDate=${end}&key=${youtubeKey}`
+    );
+    const data = await response.json();
+    const minutes = data.rows ? data.rows[0][0] : 0;
+    const hours = Math.floor(minutes / 60);
+    return hours;
+  } catch (err) {
+    console.error("❌ YouTube Analytics API error:", err);
+    return "N/A";
+  }
+}
+
+// --- AI Intent + Chat ---
 async function chatWithAI(prompt) {
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -62,20 +85,19 @@ async function chatWithAI(prompt) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openai/gpt-3.5-turbo", // Creative + stable free model
-        messages: [{ role: "user", content: prompt }]
+        model: "openai/gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: "You are NeuroByte bot. Understand user queries in English + Tanglish. If user asks about YouTube stats, reply with intent 'stats'. If about upload, reply with intent 'upload'. If about AdSense, reply with intent 'adsense'. Otherwise, reply normally as creative AI." },
+          { role: "user", content: prompt }
+        ]
       })
     });
 
     const data = await response.json();
-    if (data.error) {
-      console.error("❌ OpenRouter API error:", data.error);
-      return "⚠️ Bro, OpenRouter quota exceeded or error occurred.";
-    }
     return data.choices[0].message.content;
   } catch (err) {
     console.error("❌ API call failed:", err);
-    return "😅 Bro, OpenRouter didn’t reply… check logs!";
+    return "😅 Bro, AI didn’t reply… check logs!";
   }
 }
 
@@ -86,36 +108,25 @@ bot.on('message', async (msg) => {
 
   console.log("📩 Received:", text);
 
-  if (text.toLowerCase().includes('upload')) {
+  const aiReply = await chatWithAI(text);
+
+  if (aiReply.toLowerCase().includes("stats")) {
+    const stats = await getYouTubeStats();
+    bot.sendMessage(chatId, `📊 Bro, here’s the latest:\nSubs: ${stats.subs}\nViews: ${stats.views}\nVideos: ${stats.videos}`);
+    return;
+  }
+  if (aiReply.toLowerCase().includes("upload")) {
     bot.sendMessage(chatId, "🎬 Okay bro, I’ll upload a fresh video now!");
     triggerWorkflow();
     return;
   }
-  if (text.toLowerCase().includes('subs')) {
+  if (aiReply.toLowerCase().includes("adsense")) {
     const stats = await getYouTubeStats();
-    bot.sendMessage(chatId, `👥 Current subs: ${stats.subs}`);
-    return;
-  }
-  if (text.toLowerCase().includes('report')) {
-    const stats = await getYouTubeStats();
-    bot.sendMessage(chatId, `📊 Report:\nViews: ${stats.views}\nSubs: ${stats.subs}\nVideos: ${stats.videos}`);
-    return;
-  }
-  if (text.toLowerCase().includes('adsense')) {
-    const stats = await getYouTubeStats();
-    if (parseInt(stats.subs) >= 1000 && parseInt(stats.watchHours) >= 4000) {
-      bot.sendMessage(chatId, "✅ Channel is ready for AdSense!");
-    } else {
-      bot.sendMessage(chatId, `⚠️ Not ready yet bro. Subs: ${stats.subs}, Watch Hours: ${stats.watchHours}. Need 1000 subs + 4000 hours.`);
-    }
-    return;
-  }
-  if (text.toLowerCase().includes('idea') || text.toLowerCase().includes('trend')) {
-    bot.sendMessage(chatId, "🔥 Idea: ‘Top 5 AI Tools for 2026’ or ‘Budget Android Phones vs iPhone SE 2026’. Shorts on AI photo apps are trending 🚀");
+    const watchHours = await getWatchHours();
+    bot.sendMessage(chatId, `⚠️ Adsense check:\nSubs: ${stats.subs}\nWatch Hours (last 60 months): ${watchHours}\nNeed 1000 subs + 4000 watch hours in last 12 months.`);
     return;
   }
 
-  const aiReply = await chatWithAI(text);
   bot.sendMessage(chatId, aiReply);
 });
 
