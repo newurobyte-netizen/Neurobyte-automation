@@ -27,11 +27,11 @@ async function getYouTubeStats() {
   return { subs: 850, views: 12340, topVideo: "AI Tools 2026", watchHours: 3200 };
 }
 
-// --- OpenAI GPT-4 Turbo Chat Response ---
+// --- OpenAI GPT-3.5 Turbo Chat Response ---
 async function chatWithAI(prompt) {
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo",   // advanced model
+      model: "gpt-3.5-turbo",   // ✅ works for all accounts
       messages: [{ role: "user", content: prompt }],
       max_tokens: 300
     });
