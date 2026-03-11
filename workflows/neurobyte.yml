@@ -1,0 +1,120 @@
+name: NeuroByte Automation
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # Every 6 hours → 4 videos/day
+  workflow_dispatch:        # Allow manual trigger too
+
+jobs:
+  create-upload-video:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      # Step 1: Fetch Trending Topic + Script
+      - name: Generate Script with AI
+        run: |
+          node -e "
+          const fetch = require('node-fetch');
+          (async () => {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer ${{ secrets.OPENROUTER_API_KEY }}',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'openai/gpt-3.5-turbo',
+                messages: [{
+                  role: 'user',
+                  content: 'Pick a trending topic in AI, smartphones, or tech tutorials (rotate niches daily). Write a YouTube script with SEO title, description, tags, and narration.'
+                }]
+              })
+            });
+            const data = await response.json();
+            const script = data.choices[0].message.content;
+            require('fs').writeFileSync('script.txt', script);
+          })();
+          "
+
+      # Step 2: Quality Reviewer AI
+      - name: Review Script Quality
+        run: |
+          node -e "
+          const fs = require('fs');
+          const fetch = require('node-fetch');
+          const script = fs.readFileSync('script.txt','utf8');
+          (async () => {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer ${{ secrets.OPENROUTER_API_KEY }}',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'openai/gpt-3.5-turbo',
+                messages: [{
+                  role: 'user',
+                  content: `Review this YouTube script for narration clarity, thumbnail CTR potential, and SEO metadata strength. Rewrite title/description/tags if weak. Return improved script. Script: ${script}`
+                }]
+              })
+            });
+            const data = await response.json();
+            const reviewed = data.choices[0].message.content;
+            fs.writeFileSync('script.txt', reviewed);
+          })();
+          "
+
+      # Step 3: Generate Audio (TTS)
+      - name: Generate Audio
+        run: |
+          pip install gTTS
+          python - <<'EOF'
+          from gtts import gTTS
+          text = open('script.txt').read()
+          tts = gTTS(text)
+          tts.save("voice.mp3")
+          EOF
+
+      # Step 4: Create Video
+      - name: Create Video
+        run: |
+          sudo apt-get install -y ffmpeg
+          ffmpeg -loop 1 -i assets/background.jpg -i voice.mp3 -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest output.mp4
+
+      # Step 5: Upload to YouTube
+      - name: Upload to YouTube
+        uses: googleapis/github-action@v0.5.0
+        with:
+          args: >
+            youtube-upload
+            --title "$(grep 'Title:' script.txt | sed 's/Title: //')"
+            --description "$(grep 'Description:' script.txt | sed 's/Description: //')"
+            --tags "$(grep 'Tags:' script.txt | sed 's/Tags: //')"
+            --privacy public
+            output.mp4
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      # Step 6: Engagement Boosters
+      - name: Add Engagement Boosters
+        run: |
+          echo "Pinned Comment: Which AI tool do you use daily? Comment below 👇" > pinned.txt
+          echo "Community Post: Poll - Which smartphone brand do you trust most in 2026?" > community.txt
+
+      # Step 7: Analytics Feedback Loop
+      - name: Fetch Analytics
+        run: |
+          curl "https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${{ secrets.CHANNEL_ID }}&metrics=views,averageViewDuration,annotationClickThroughRate&startDate=$(date -d '1 day ago' +%Y-%m-%d)&endDate=$(date +%Y-%m-%d)&key=${{ secrets.YOUTUBE_API_KEY }}" -o analytics.json
+          cat analytics.json
